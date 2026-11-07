@@ -1,0 +1,1 @@
+export const PageHeader = ({eyebrow,title,description,children}) => <div className="page-heading"><div><div className="eyebrow" data-testid="page-eyebrow">{eyebrow}</div><h1 data-testid="page-title">{title}</h1>{description && <p data-testid="page-description">{description}</p>}</div><div className="heading-actions">{children}</div></div>;

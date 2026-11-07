@@ -1,0 +1,11 @@
+import {useMemo,useState} from 'react';
+import map from '../assets/map-points.json';
+import {countries} from '../lib/content';
+const xy=c=>[(c.lng+180)/360*235,(80-c.lat)/138*90];
+const dots=map.points.map(([x,y],i)=>{const nearest=countries.reduce((a,c)=>{const [cx,cy]=xy(c);const d=Math.hypot(x-cx,y-cy);return d<a.d?{d,c}:a;},{d:999});return {x,y,color:nearest.d<12 && (i*7)%11<8?nearest.c.color:'#30363a',opacity:nearest.d<12?.35+((i*13)%7)/10:.6};});
+export const WorldMap = ({filter,onFilter,id='world'})=>{
+ const [hover,setHover]=useState(null);
+ const focus=filter?countries.find(c=>c.name===filter):null;
+ const viewBox=focus?`${Math.max(0,xy(focus)[0]-38)} ${Math.max(0,Math.min(48,xy(focus)[1]-22))} 76 42`:'0 0 235 90';
+ return <div className="world-map" data-testid={`${id}-map`}><svg viewBox={viewBox} aria-label="Sample global verified-view activity" role="img">{dots.map((p,i)=><circle key={i} cx={p.x} cy={p.y} r=".32" fill={p.color} opacity={p.opacity}/>)}{countries.map(c=>{const [x,y]=xy(c);return <g key={c.name} tabIndex="0" role="button" data-testid={`${id}-country-${c.name.replaceAll(' ','-')}`} aria-label={c.name} onMouseEnter={()=>setHover(c)} onMouseLeave={()=>setHover(null)} onFocus={()=>setHover(c)} onBlur={()=>setHover(null)} onClick={()=>onFilter?.(filter===c.name?null:c.name)} onKeyDown={e=>{if(e.key==='Enter')onFilter?.(filter===c.name?null:c.name);}} style={{cursor:onFilter?'pointer':'help'}}><title>{c.name}: {c.views.toLocaleString()} sample views · ${c.cpvv} CPVV · {c.platform}</title><circle cx={x} cy={y} r="3.4" fill={c.color} opacity=".1"/><circle cx={x} cy={y} r="1.1" fill={c.color}/><circle cx={x} cy={y} r="5" fill="transparent"/></g>;})}</svg>{hover&&<div className="map-tooltip" data-testid={`${id}-tooltip`}><strong>{hover.name}</strong><div><span>Verified views</span><b className="mono">{hover.views.toLocaleString()}</b></div><div><span>Avg. CPVV</span><b className="mono">${hover.cpvv}</b></div><div><span>Top platform</span><b>{hover.platform}</b></div></div>}<div className="map-legend"><span><i style={{background:'#10b981'}}/>High activity</span><span><i style={{background:'#fbbf24'}}/>Growing</span><span><i style={{background:'#06b6d4'}}/>Emerging</span></div></div>;
+};

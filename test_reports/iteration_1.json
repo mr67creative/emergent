@@ -1,0 +1,41 @@
+{
+  "summary": "15/15 API regression tests passed. Browser-tested earnings/cancellation, profile-only simulator, dashboard payout/interests, insight contribution-to-publication, rewards shipping/boost, studio CRUD/review, admin shortcuts and CSV analytics. All 8 routes fit 1920x800, 390x844 and 360x780. Two confirmed earnings display defects remain; no blocking workflow failure or API 500 observed. All ads, AI, money, shipping and analytics are intentionally SIMULATED/MOCKED.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "ChargeExperience", "issue": "After withdrawing to zero, landing and simulator vault display $14.850 although dashboard/nav/simulator summary correctly show zero. Root cause: balance_mills || 14850 treats legitimate zero as missing (line 26). Use nullish fallback.", "selector": "[data-testid='charge-vault-total']", "priority": "HIGH"},
+      {"component": "ChargeExperience", "issue": "Boost credits are saved correctly but earned indicator and success toast omit bonus. With boost active, two charges increased actual balance $0.000 -> $0.011 -> $0.023; indicator showed +$0.022 instead of +$0.023, and toast remains +$0.011. Root cause: hardcoded setEarned(e=>e+11) and toast in line 16 instead of actual server balance delta.", "selector": "[data-testid='charge-earned']", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Dashboard/advertiser analytics console", "issues": ["Repeated Recharts width(-1)/height(-1) mount warnings from ResponsiveContainer. Charts ultimately render, but initial container sizing should be stabilized."]},
+      {"screen": "Landing daily-insight preview", "issues": [".insight-mini radius is 9px, exceeding requested <=8px card limit; AdBox12px is the explicit exception."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_meantime.py",
+    "/app/test_reports/pytest/meantime_results.xml",
+    "/app/test_reports/browser_core/automation_output/20261107_201611_8decf7dc034d/console_20261107_201611.log",
+    "/app/test_reports/browser_workflows/automation_output/20261107_201707_21cdffa2c692/console_20261107_201707.log",
+    "/app/test_reports/browser_final/automation_output/20261107_201757_3b3b61f2b2dc/console_20261107_201757.log",
+    "/app/test_reports/browser_final/analytics.csv"
+  ],
+  "action_items": [
+    "Replace falsy balance fallback with nullish fallback; verify zero in both landing and simulator.",
+    "Use actual credited delta for earned indicator and toast, including boost remainder payouts.",
+    "Stabilize chart container initial sizes and lower insight-mini radius to 8px.",
+    "Manually check discovered-interest reset in a disposable session; reset actions were excluded per testing safety instructions."
+  ],
+  "critical_code_review_comments": [
+    "Potential concurrent read idempotency race: insight_action checks reads in previously fetched session but Mongo update filter contains only token; concurrent requests can both increment discovered while $addToSet deduplicates reads. 12-way HTTP test passed this run, so this is a code-review risk, not a reproduced defect. Add reads-not-containing-id to atomic write predicate.",
+    "InterestRadar fixes axes to six declared topics, excluding Systems, Math and Startups. Default discovered Systems44 and subsequent reads of those topics cannot appear on radar; consider supporting union of declared/discovered topics.",
+    "Campaign.topics accepts arbitrary strings and whitespace-only creative text passes backend length validation, despite stricter frontend checks. Consider server-side target whitelist and stripped nonblank validation. Not exercised as failures this iteration."
+  ],
+  "updated_files": ["/app/backend/tests/test_meantime.py", "/app/tests/cleanup_meantime_sandboxes.py", "/app/test_reports/iteration_1.json"],
+  "success_rate": {"backend": "100% (15/15)", "frontend": "24/24 responsive route checks passed; core workflows passed after animation waits; 2 confirmed display defects"},
+  "test_credentials": "Credentials file contains only placeholder comments. No account credentials are needed; isolated demo sessions were created via /api/session. External URL used from frontend/.env, not the older briefing URL.",
+  "seed_data_creation": "No seed/reset/migration run and no pre-existing user data changed. API fixtures cleaned their exact tokens/owner records. Two tracked browser sandboxes are cleaned using exact tokens; campaign/submission titles were TEST_ prefixed. Initial anonymous smoke session was not tracked, so its default simulation profile may remain.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "No application source modified. API pytest runs via backend pytest.ini xdist configuration and uses frontend env URL. Drawer forced clicks initially failed during 500ms slide animation, then passed with 600ms wait; these were test timing errors, not app defects. Initial selector send-prompt was corrected to send-prompt-button. Screenshot route-name expression caused a tool wrapper TypeError and was corrected with explicit names. Source href was verified; third-party doc navigation was not exercised. Concurrent read test passed once; boost $30 cap was reviewed but not exhausted via thousands of views. No real AI/ad/payment/shipment integration exists by design. No broken visible images, page error text, horizontal overflow or blocking console errors observed; only Recharts warnings."
+}

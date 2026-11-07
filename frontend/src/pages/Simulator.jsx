@@ -1,0 +1,5 @@
+import {Zap,Clock3,Wallet} from 'lucide-react';
+import {PageHeader} from '../components/PageHeader';
+import {ChargeExperience} from '../components/ChargeExperience';
+import {useStore,money} from '../lib/store';
+export default function Simulator(){const {state}=useStore();return <div className="page-container"><PageHeader eyebrow="YOUR PERSONAL PLAYGROUND" title="The in-between. In action." description="AI host simulation · No prompts sent to AI providers."/><ChargeExperience simulator/><div className="simulator-result"><div><Zap size={16}/><strong className="mono" data-testid="sim-total-views">{state.profile.views}</strong> views</div><div><Wallet size={16}/><strong className="mono" data-testid="sim-balance">{money(state.profile.balance_mills,3)}</strong> earned</div><div><Clock3 size={16}/><strong>5 seconds.</strong> Well spent.</div></div></div>}
