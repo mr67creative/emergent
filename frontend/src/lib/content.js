@@ -1,4 +1,5 @@
 export const products = {
+ desk: 'https://static.prod-images.emergentagent.com/jobs/4e80ae4e-8dfc-4a76-bc6e-9d96d5520c47/images/b87b1ac115ac4fcabdd3798e8c32f354629d51cec5308f3b1611da6801c15204.jpeg',
  tee: 'https://static.prod-images.emergentagent.com/jobs/4e80ae4e-8dfc-4a76-bc6e-9d96d5520c47/images/e2892d96bbabb7a58f379579a90f8df74a655dd046dd2fdb6d509d9b67e9ce82.jpeg',
  hoodie: 'https://static.prod-images.emergentagent.com/jobs/4e80ae4e-8dfc-4a76-bc6e-9d96d5520c47/images/a52daec956a2396da5bde4867d00469462a253dbc02778a65d902f3f1dba708a.jpeg',
  stickers: 'https://static.prod-images.emergentagent.com/jobs/4e80ae4e-8dfc-4a76-bc6e-9d96d5520c47/images/02894c4cfacbb9e2964f6bdcc5046dd429470c503e323f15782b8a86cffb626f.jpeg',

@@ -1,0 +1,95 @@
+async def run_test(page, output_dir, page_url):
+    import json
+    base=page.url.split('/')[0]+'//'+page.url.split('/')[2]
+    await page.evaluate("localStorage.setItem('meantime-demo-token','I6wKwR2HzXjJXUBCDpi23TY8yadrjXAwRb1Yoa0MGy8')")
+    await page.set_viewport_size({'width':1920,'height':800})
+    try:
+        await page.goto(base+'/extension')
+        await page.wait_for_selector('[data-testid="extension-popup"]')
+        print('MODE_STATE',await page.get_by_test_id('extension-mode-insights').get_attribute('class'))
+        await page.get_by_test_id('extension-mode-insights').click(force=True)
+        await page.wait_for_timeout(350)
+        await page.reload()
+        await page.wait_for_selector('[data-testid="extension-insight-preview"]')
+        await page.get_by_test_id('extension-open-simulator').click(force=True)
+        await page.wait_for_selector('[data-testid="sim-balance"]')
+        assert await page.get_by_test_id('ad-mode-button').is_disabled()
+        before=await page.get_by_test_id('sim-balance').inner_text()
+        await page.get_by_test_id('send-prompt-button').click(force=True)
+        await page.wait_for_timeout(5700)
+        assert await page.get_by_test_id('sim-balance').inner_text()==before
+        print('PASS insights-only no earnings',before)
+        await page.goto(base+'/extension')
+        await page.get_by_test_id('extension-mode-ads').click(force=True)
+        await page.wait_for_timeout(350)
+        await page.get_by_test_id('popup-ad-dismiss').click(force=True)
+        await page.get_by_test_id('extension-restore-ad').click(force=True)
+        await page.get_by_test_id('extension-open-simulator').click(force=True)
+        await page.get_by_test_id('send-prompt-button').click(force=True)
+        await page.wait_for_timeout(5700)
+        assert await page.get_by_test_id('charge-earned').inner_text()=='+$0.011'
+        assert await page.get_by_test_id('sim-balance').inner_text()=='$2.011'
+        print('PASS ads exact 11 mills and popup dismiss/restore')
+        await page.goto(base+'/referrals')
+        await page.context.grant_permissions(['clipboard-read','clipboard-write'])
+        await page.get_by_test_id('copy-referral-link').click(force=True)
+        await page.wait_for_timeout(200)
+        assert await page.evaluate('navigator.clipboard.readText()')==await page.get_by_test_id('referral-link').input_value()
+        print('PASS copy referral link with permission')
+    except Exception as e:
+        print('FAIL mode/clipboard',repr(e))
+    try:
+        await page.goto(base+'/advertiser/analytics')
+        await page.wait_for_selector('[data-testid="ad-world-pixel-7530"]')
+        assert await page.locator('[data-dot-index]').count()==7531
+        print('PIXEL_INTERACTIVE',await page.locator('[data-dot-index]').evaluate_all("es=>({count:es.length,enabled:es.filter(e=>getComputedStyle(e).pointerEvents==='all').length})"))
+        original=await page.get_by_test_id('ad-analytics-kpi-0').inner_text()
+        await page.get_by_test_id('ad-world-pixel-3600').hover(force=True)
+        await page.wait_for_timeout(200)
+        print('PIXEL_HOVER',await page.get_by_test_id('ad-world-tooltip').inner_text())
+        await page.get_by_test_id('ad-world-pixel-3600').click(force=True)
+        await page.wait_for_timeout(200)
+        selected=await page.get_by_test_id('advertiser-region-title').inner_text()
+        print('PIXEL_CLICK',selected,'KPI',await page.get_by_test_id('ad-analytics-kpi-0').inner_text())
+        assert await page.get_by_test_id('ad-analytics-kpi-0').inner_text()!=original
+        await page.get_by_test_id('ad-world-reset').click(force=True)
+        await page.get_by_test_id('ad-world-zoom-in').click(force=True)
+        assert await page.get_by_test_id('ad-world-zoom-level').inner_text()=='150%'
+        viewport=page.get_by_test_id('ad-world-viewport')
+        await viewport.hover();await page.mouse.wheel(0,-100)
+        await page.wait_for_timeout(200)
+        assert await page.get_by_test_id('ad-world-zoom-level').inner_text()=='170%'
+        await viewport.focus();await page.keyboard.press('+')
+        await page.wait_for_timeout(100)
+        assert await page.get_by_test_id('ad-world-zoom-level').inner_text()=='220%'
+        await page.keyboard.press('-')
+        await page.keyboard.press('ArrowRight');await page.wait_for_timeout(300)
+        print('KEYBOARD_PAN',await viewport.evaluate('(e)=>({x:e.scrollLeft,y:e.scrollTop,scrollWidth:e.scrollWidth,width:e.clientWidth,scrollHeight:e.scrollHeight,height:e.clientHeight})'))
+        box=await viewport.bounding_box()
+        await page.mouse.move(box['x']+box['width']*.7,box['y']+160)
+        await page.mouse.down();await page.mouse.move(box['x']+box['width']*.4,box['y']+100,steps=10);await page.mouse.up()
+        print('POINTER_PAN',await viewport.evaluate('(e)=>({x:e.scrollLeft,y:e.scrollTop})'))
+        await page.get_by_test_id('ad-world-region-select').select_option(label='India')
+        await page.wait_for_timeout(350)
+        print('COUNTRY_CENTER',await viewport.evaluate('(e)=>({x:e.scrollLeft,y:e.scrollTop})'))
+        assert await page.get_by_test_id('ad-world-zoom-level').inner_text()=='300%'
+        seven=int((await page.get_by_test_id('ad-analytics-kpi-0').inner_text()).replace(',',''))
+        await page.get_by_test_id('advertiser-period').select_option('30')
+        thirty=int((await page.get_by_test_id('ad-analytics-kpi-0').inner_text()).replace(',',''))
+        assert thirty==seven*4
+        async with page.expect_download() as info:
+            await page.get_by_test_id('export-analytics').click(force=True)
+        await (await info.value).save_as('/app/test_reports/refresh_map/india30.csv')
+        await page.screenshot(path='/app/test_reports/refresh_map/automation_output/20261107_204713_6e5992759f8c/map-desktop.jpeg', type="jpeg", quality=40, full_page=False)
+        print('PASS map nodes/hover/click/KPI/zoom/wheel/keyboard/drag/select/period/export')
+        await page.set_viewport_size({'width':360,'height':780})
+        await page.get_by_test_id('ad-world-reset').click(force=True)
+        await viewport.scroll_into_view_if_needed()
+        await page.get_by_test_id('ad-world-zoom-in').click(force=True)
+        await page.get_by_test_id('ad-world-zoom-in').click(force=True)
+        await page.screenshot(path='/app/test_reports/refresh_map/automation_output/20261107_204713_6e5992759f8c/map-mobile.jpeg', type="jpeg", quality=40, full_page=False)
+        print('MOBILE_MAP_OVERFLOW',await page.evaluate('document.documentElement.scrollWidth'),await viewport.evaluate('(e)=>({scroll:e.scrollWidth,width:e.clientWidth,height:e.scrollHeight})'))
+    except Exception as e:
+        print('FAIL map',repr(e))
+    error_text=await page.evaluate("""() => {const errorElements = Array.from(document.querySelectorAll('.error, [class*="error"], [id*="error"]'));return errorElements.map(el => el.textContent).join(", ");}""")
+    print(f'Found error message: {error_text}' if error_text else 'No error messages found on the page')

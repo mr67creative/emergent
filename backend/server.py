@@ -11,7 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 from pydantic import BaseModel, Field, HttpUrl, ConfigDict
 from pymongo import ReturnDocument
-from sample_data import INSIGHTS, REVIEWS, new_profile
+from sample_data import INSIGHTS, REVIEWS, new_profile, feature_defaults
 
 load_dotenv(Path(__file__).parent / '.env')
 client = AsyncIOMotorClient(os.environ['MONGO_URL'])
@@ -36,6 +36,10 @@ async def owner(x_demo_token: str = Header(...)):
     document = await db.sessions.find_one({'token': x_demo_token}, {'_id': 0})
     if not document:
         raise HTTPException(401, 'Session expired. Reload to reconnect.')
+    for key, value in feature_defaults().items():
+        if key not in document['profile']:
+            await db.sessions.update_one({'token': x_demo_token, f'profile.{key}': {'$exists': False}}, {'$set': {f'profile.{key}': value}})
+    document = await db.sessions.find_one({'token': x_demo_token}, {'_id': 0})
     return document
 
 async def state_for(token):
@@ -51,16 +55,27 @@ async def state_for(token):
         if s['status'] == 'pending':
             reviews.append({'id': s['id'], 'kind': 'insight', 'brand': 'Your brand', 'headline': s['title'], 'description': s['body'], 'cta': 'Read insight', 'risk': 18, 'fraud': 8, 'copy': 12, 'url_safety': 99})
     published = [{'id': s['id'], 'title': s['title'], 'topic': s['topic'], 'seconds': 60, 'body': s['body'], 'source': s['source'], 'author': 'Your brand', 'likes': 0, 'visual': 'systems'} for s in submissions if s['status'] == 'approved']
+    session['profile']['claims'] = {k:v for k,v in session['profile']['claims'].items() if k != 'boost'}
     return State(profile=session['profile'], insights=INSIGHTS + published, campaigns=campaigns, submissions=submissions, reviews=reviews)
 
 @api.get('/')
 async def health():
     return {'name': 'MeanTime', 'mode': 'simulation'}
 
+class JoinSession(BaseModel):
+    referral_code: str | None = Field(default=None, max_length=32)
+
 @api.post('/session', response_model=Session)
-async def create_session():
+async def create_session(payload: JoinSession | None = None):
     token = secrets.token_urlsafe(32)
-    await db.sessions.insert_one({'token': token, 'profile': new_profile(), 'created_at': datetime.now(timezone.utc).isoformat()})
+    doc = {'token': token, 'profile': new_profile(), 'created_at': datetime.now(timezone.utc).isoformat()}
+    if payload and payload.referral_code:
+        referrer = await db.sessions.find_one({'profile.referral_code':payload.referral_code}, {'_id':0, 'token':1})
+        if referrer:
+            referral_id = str(uuid.uuid4())
+            doc.update(referred_by=referrer['token'], referral_id=referral_id)
+            await db.sessions.update_one({'token':referrer['token']}, {'$push':{'profile.referrals':{'id':referral_id,'name':'New member','verified_mills':0,'claimed':False,'sample':False}}})
+    await db.sessions.insert_one(doc)
     return Session(token=token)
 
 @api.get('/state', response_model=State)
@@ -79,29 +94,30 @@ class ChargeComplete(BaseModel):
 @api.post('/charges/complete', response_model=State)
 async def complete_charge(payload: ChargeComplete, session=Depends(owner)):
     cutoff = (datetime.now(timezone.utc) - timedelta(seconds=5)).isoformat()
-    profile = session['profile']
     increment = {'profile.balance_mills': 11, 'profile.views': 1, 'profile.seconds': 5}
     update = {'$inc': increment, '$unset': {'charge': ''}}
-    if 'boost' in profile['claims'] and profile.get('boost_base_mills', 0) < 30000:
-        eligible = min(11, 30000 - profile.get('boost_base_mills', 0))
-        micros = profile.get('boost_remainder_micros', 0) + eligible * 50
-        increment['profile.balance_mills'] += micros // 1000
-        increment['profile.boost_base_mills'] = eligible
-        update['$set'] = {'profile.boost_remainder_micros': micros % 1000}
     result = await db.sessions.update_one({'token': session['token'], 'charge.id': payload.id, 'charge.started_at': {'$lte': cutoff}}, update)
     if not result.modified_count:
         raise HTTPException(409, 'Charge incomplete or already credited.')
+    if session.get('referred_by'):
+        await db.sessions.update_one({'token':session['referred_by'], 'profile.referrals.id':session['referral_id']}, {'$inc':{'profile.referrals.$.verified_mills':20}})
     result_state = await state_for(session['token'])
     result_state.credited_mills = increment['profile.balance_mills']
     return result_state
 
+class Withdrawal(BaseModel):
+    amount_mills: int | None = Field(default=None, ge=5000)
+
 @api.post('/withdraw', response_model=State)
-async def withdraw(session=Depends(owner)):
-    amount = session['profile']['balance_mills']
+async def withdraw(payload: Withdrawal | None = None, session=Depends(owner)):
+    balance = session['profile']['balance_mills']
+    amount = payload.amount_mills if payload and payload.amount_mills is not None else balance
     if amount < 5000:
         raise HTTPException(400, 'Minimum balance is $5.00.')
-    transaction = {'id': str(uuid.uuid4()), 'amount_mills': amount, 'date': datetime.now(timezone.utc).isoformat(), 'status': 'Simulated'}
-    result = await db.sessions.update_one({'token': session['token'], 'profile.balance_mills': amount}, {'$inc': {'profile.balance_mills': -amount}, '$push': {'profile.transactions': transaction}})
+    if amount > balance:
+        raise HTTPException(400, 'Amount exceeds your available balance.')
+    transaction = {'id': str(uuid.uuid4()), 'kind':'payout', 'method':session['profile']['payout_method'], 'amount_mills': amount, 'date': datetime.now(timezone.utc).isoformat(), 'status': 'Simulated'}
+    result = await db.sessions.update_one({'token': session['token'], 'profile.balance_mills': {'$gte':amount}}, {'$inc': {'profile.balance_mills': -amount}, '$push': {'profile.transactions': transaction}})
     if not result.modified_count:
         raise HTTPException(409, 'Balance changed. Please try again.')
     return await state_for(session['token'])
@@ -153,7 +169,7 @@ async def insight_action(insight_id: str, payload: InsightAction, session=Depend
     await db.sessions.update_one(predicate, update)
     return await state_for(session['token'])
 
-MILESTONES = {'stickers':100,'boost':250,'tee':500,'hoodie':1000,'desk':2500}
+MILESTONES = {'stickers':100,'tee':500,'hoodie':1000,'desk':2500}
 @api.post('/rewards/{reward_id}/claim', response_model=State)
 async def claim_reward(reward_id: str, session=Depends(owner)):
     if reward_id not in MILESTONES:
@@ -230,11 +246,53 @@ async def review(review_id: str, payload: Decision, session=Depends(owner)):
         await db[collection].update_one({'id':review_id, 'owner':session['token']}, {'$set': {'status':payload.decision}})
     return await state_for(session['token'])
 
+class PayoutMethod(BaseModel):
+    method: Literal['demo-bank','demo-wallet']
+
+@api.put('/payouts/settings', response_model=State)
+async def payout_settings(payload: PayoutMethod, session=Depends(owner)):
+    await db.sessions.update_one({'token':session['token']}, {'$set':{'profile.payout_method':payload.method}})
+    return await state_for(session['token'])
+
+class ExtensionSettings(BaseModel):
+    enabled: bool
+    mode: Literal['ads','insights']
+    platforms: list[Literal['ChatGPT','Claude','Gemini','DeepSeek','Grok']] = Field(max_length=5)
+
+@api.put('/extension/settings', response_model=State)
+async def extension_settings(payload: ExtensionSettings, session=Depends(owner)):
+    await db.sessions.update_one({'token':session['token']}, {'$set':{'profile.extension':payload.model_dump()}})
+    return await state_for(session['token'])
+
+@api.post('/referrals/{referral_id}/activity', response_model=State)
+async def referral_activity(referral_id: str, session=Depends(owner)):
+    ref = next((r for r in session['profile']['referrals'] if r['id']==referral_id), None)
+    if not ref:
+        raise HTTPException(404, 'Referral not found.')
+    if not ref.get('sample'):
+        raise HTTPException(400, 'This referral updates from actual simulator activity.')
+    await db.sessions.update_one({'token':session['token'], 'profile.referrals':{'$elemMatch':{'id':referral_id,'verified_mills':{'$lt':3900}}}}, {'$inc':{'profile.referrals.$.verified_mills':350}})
+    return await state_for(session['token'])
+
+@api.post('/referrals/{referral_id}/claim', response_model=State)
+async def referral_claim(referral_id: str, session=Depends(owner)):
+    ref = next((r for r in session['profile']['referrals'] if r['id']==referral_id), None)
+    if not ref:
+        raise HTTPException(404, 'Referral not found.')
+    if ref['verified_mills'] < 3900:
+        raise HTTPException(400, 'This referral has not qualified yet.')
+    transaction = {'id':str(uuid.uuid4()),'kind':'referral','amount_mills':1000,'date':datetime.now(timezone.utc).isoformat(),'status':'Simulated'}
+    result = await db.sessions.update_one({'token':session['token'], 'profile.referrals':{'$elemMatch':{'id':referral_id,'verified_mills':{'$gte':3900},'claimed':False}}}, {'$set':{'profile.referrals.$.claimed':True}, '$inc':{'profile.balance_mills':1000,'profile.referral_earned_mills':1000}, '$push':{'profile.transactions':transaction}})
+    if not result.modified_count:
+        raise HTTPException(409, 'Referral reward already claimed.')
+    return await state_for(session['token'])
+
 app.include_router(api)
 
 @app.on_event('startup')
 async def indexes():
     await db.sessions.create_index('token', unique=True)
+    await db.sessions.create_index('profile.referral_code', unique=True, sparse=True)
     for collection in ['campaigns', 'submissions']:
         await db[collection].create_index([('owner',1),('id',1)], unique=True)
 

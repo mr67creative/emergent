@@ -26,12 +26,12 @@ User supplied detailed visual-first requirements:
 - Client uses REACT_APP_BACKEND_URL exclusively for API routing.
 - Server-created random private simulation token in localStorage, supplied as X-Demo-Token. Each browser receives a private sandbox; all session/campaign/submission queries are scoped to that token. These are sandbox roles, not real production admin authorization.
 - Mongo collections: sessions (profile, active charge), campaigns, submissions. Unique session-token and owner/id indexes. Mongo response projections exclude BSON `_id`; response state uses Pydantic.
-- Integer thousandths of dollars for balances; 5% overclock bonus uses integer micro-unit carry and caps eligible ad earnings at $30.
+- Integer thousandths of dollars for balances. Overclock was removed at the user's request in the 2026-11-07 refresh; historical earnings remain intact. New verified ad charges always credit11mills.
 - Server timestamps enforce the 5-second minimum, charge ID is consumed atomically, duplicate completion blocked. Browser dismiss/hidden-tab/navigation cancels viewing. This is a simulator, not production anti-fraud verification.
 - Atomic withdrawal minimum $5. Atomic insight-read predicate prevents duplicate discovered increments.
 - Static illustrative geographic, temporal, CTR, organic-reach and risk datasets, clearly labeled sample/simulation. Persisted interactions and business actions are backed by MongoDB.
 - Reusable AdBox, rings/segments/gauge, real land-masked dotted map (7,531 points), chart components, shared header/footer and profile dropdown.
-- Three generated, hosted merchandise product images: stickers, engineer tee, stealth hoodie. Other milestone previews use appropriate product icons.
+- Four generated, hosted merchandise product images: stickers, engineer tee, stealth hoodie, desk mat with artisan keycap. Website brand monogram was reconstructed from merchandise and prepared as transparent PNG.
 - Shadcn/Radix dropdowns, sheets/dialogs, Sonner notifications; custom SVG electrical conduit and winding rewards path.
 
 ## Personas
@@ -77,4 +77,35 @@ User supplied detailed visual-first requirements:
 - Real merchandise catalog, shipping address collection and fulfillment/tracking integrations.
 
 ## Next action
-The complete simulation is ready for use. A useful optional enhancement is long-reasoning ad rotation to demonstrate multiple verified charges in one AI wait.
+The refreshed simulation is ready for use. Optional next improvement: campaign-specific performance inside the extension preview.
+
+## Refresh request — 2026-11-07
+Exact user request:
+> I want this very Herosection to be much more stronger rather than a AI slop, something like wavvy thunder effect but beautifully executed, remove translation based animation and hover effects, generate image for Desk mat and keycap, remove earning overclock, add payout, referrals, add the extension Ad box to be shown for Advertisement creation as well as some part of app, Add extension popup UI and make it accessible through profile dropdown menu item, User dashboard doesnot need World map, Advertisor's World map must be scrollable, zoomable, and instead of 7 points, each pixels or cluster should be hoverable, Navbar should be reimagined, The logo you added on Merch should also be in the website.
+
+Clarified decision: **$1 vault credit** for each referral after the existing **$3.90 verified ad revenue** threshold. Simulation scope retained; extension means an interactive in-app popup/placement preview, not an installed browser extension.
+
+### Refresh implemented
+- Replaced straight conduit with full-width Canvas electrical waves:24 layered organic strands, glow, emerald/cyan detail, charging-responsive intensity. No translated interface entrance/hover movement; decorative hover effects disabled. Canvas is nonblank/static for reduced-motion users and rendering pauses when hidden/offscreen.
+- New navbar, personal/advertiser workspace selector, mobile route navigation, profile dropdown, matching merchandise monogram across website/popup/vault/favicon.
+- Generated desk mat/keycap studio artwork; used in milestone drawer and preview teaser.
+- Removed250-view overclock milestone and bonus logic. Existing stored bonus earnings are preserved; old boost claim hidden in state, cannot be newly claimed. Remaining physical milestones100/500/1000/2500.
+- Added `/payouts`: available balance, demo bank/wallet destination, amount presets/custom amount, minimum$5/overdraft validation, confirmation, persistent payout history and CSV export. Dashboard quick withdrawal remains.
+- Added `/referrals`: private invite code/link, labeled sample members, progress meters, simulated activity, qualification and exact-once$1 credits. A fresh browser joining via ref code creates a real sandbox referral record; its completed ad simulations add20mills verified gross ad revenue to inviter's corresponding record. No real messages or money transfers.
+- Added `/extension` via profile dropdown, with browser chrome, compact popup, vault/stats, power switch, ad/insight mode and per-site controls. Settings persist and affect simulator. Popup shows latest saved creative; simulator serves approved creative.
+- Shared `ExtensionAdFrame` preserves exact minimal2-row `AdBox`, adds external extension attribution, and appears in composer, simulator, extension UI and dashboard feed preview.
+- Removed user-dashboard world map; replaced with earnings timeline. Added payout/referral access and corrected tee milestone02.
+- Advertiser map now has7,531 individually inspectable land pixels in158 geographic clusters using actual country GeoJSON. Regional labels, sample per-pixel views/clicks/CPVV/platform, wheel/button/key zoom100–500%, native overflow scrollbars, drag pan, region select/focus, click-filter and reset. CSV and KPI period filters align. Coastal boundary pixels are honestly labeled coastal clusters.
+- All-region spend now sums regional views×regionalCPVV (not flat CPVV).7-day$3014.80 and30-day$12059.21 verified against the sample dataset.
+- Added backward-compatible feature defaults to existing sandbox profiles without resetting balances, creatives or history. New referral-code index; same private owner scoping.
+
+### Refresh verification
+- `/app/test_reports/iteration_2.json`:20/20 API tests passed. Studio/admin/insight/reward workflows regressed successfully.
+- Initial responsive run31/33 passed; only simulator at390/360 overflowed. Fixed canvas bounds and main horizontal clipping. Post-fix browser mobile frames verify390→390 and360→360 document widths.
+- Corrected weighted spend and tee milestone mismatch; browser assertions pass for7/30days, region reset and milestone02.
+- Header logo transparent corners verified; new desk artwork and all product images loaded. Popup controls/settings persistence, referral link/credit, withdrawals/export, individual pixel hover/click, zoom/wheel/drag/arrow-key pan verified.
+- Canvas pixel sampling confirms rendered electrical strands and changing frames; reduced-motion retains nonblank still frame. Tested hover positions unchanged and CSS motion countzero.
+- Final optimized frontend build passed: `/app/test_reports/refresh-build-final.log`.
+- Tester changed test scripts/reports only, not application sources. Old bonus test intentionally replaced with removal/history-preservation regression.
+- Local rerun wrapper lacked Playwright; equivalent remaining responsive checks were executed in existing browser tooling, not reported as an application failure.
+- No known blocking issue in requested simulation flows. External ad serving, extension installation, real payouts, real shipping and geographic telemetry remain outside the confirmed scope.

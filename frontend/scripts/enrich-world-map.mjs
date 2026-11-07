@@ -1,0 +1,9 @@
+import fs from 'fs';
+import {booleanPointInPolygon} from '@turf/boolean-point-in-polygon';
+const base=JSON.parse(fs.readFileSync('src/assets/map-points.json'));
+const world=await (await fetch('https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson')).json();
+const features=world.features.map(f=>{let minX=180,maxX=-180,minY=90,maxY=-90;const scan=a=>{if(typeof a[0]==='number'){minX=Math.min(minX,a[0]);maxX=Math.max(maxX,a[0]);minY=Math.min(minY,a[1]);maxY=Math.max(maxY,a[1]);}else a.forEach(scan);};scan(f.geometry.coordinates);return {...f,bounds:[minX,minY,maxX,maxY]};});
+const countries=[],ids=new Map();let missing=0;
+const points=base.points.map(([x,y],i)=>{const lng=x/235*360-180,lat=80-y/90*138;const country=features.find(f=>lng>=f.bounds[0]&&lng<=f.bounds[2]&&lat>=f.bounds[1]&&lat<=f.bounds[3]&&booleanPointInPolygon([lng,lat],f));const name=country?.properties.name||'Coastal cluster';if(!country)missing++;if(!ids.has(name)){ids.set(name,countries.length);countries.push({name,views:0,clicks:0,x:0,y:0,count:0,cpvv:(.016+(countries.length%15)/1000).toFixed(3),platform:['ChatGPT','Claude','Gemini','DeepSeek','Grok'][countries.length%5]});}const id=ids.get(name),views=(i*17+id*11)%39,clicks=views>20?(i%3):0,c=countries[id];c.views+=views;c.clicks+=clicks;c.x+=x;c.y+=y;c.count++;return [x,y,id,views,clicks];});
+countries.forEach(c=>{c.x/=c.count;c.y/=c.count;});
+fs.writeFileSync('src/assets/world-activity.json',JSON.stringify({points,countries}));console.log('Prepared',points.length,'interactive pixels in',countries.length,'geographic clusters;',missing,'coastal points.');

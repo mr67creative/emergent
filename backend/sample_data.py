@@ -1,5 +1,15 @@
+import secrets
+
+def feature_defaults():
+    return {'referral_code': 'MT-' + secrets.token_hex(4).upper(), 'referral_earned_mills': 0,
+            'payout_method': 'demo-bank',
+            'extension': {'enabled': True, 'mode': 'ads', 'platforms': ['ChatGPT','Claude','Gemini','DeepSeek','Grok']},
+            'referrals': [{'id':'ref-maya','name':'Maya Chen','verified_mills':4300,'claimed':False,'sample':True},
+                          {'id':'ref-jamie','name':'Jamie Park','verified_mills':2850,'claimed':False,'sample':True},
+                          {'id':'ref-taylor','name':'Taylor Quinn','verified_mills':1250,'claimed':False,'sample':True}]}
+
 def new_profile():
-    return {'name':'Alex Morgan', 'balance_mills':14850, 'views':342, 'seconds':13260, 'referral_mills':2850,
+    return {**feature_defaults(), 'name':'Alex Morgan', 'balance_mills':14850, 'views':342, 'seconds':13260, 'referral_mills':2850,
             'interests':['AI / ML','Programming','Hardware'], 'discovered':{'Systems':44,'Science':28},
             'bookmarks':[], 'upvotes':[], 'reads':[], 'source_clicks':[], 'claims':{}, 'transactions':[], 'reviewed':[], 'decisions':[]}
 

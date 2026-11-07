@@ -1,0 +1,38 @@
+{
+  "summary": "Refresh tested against public preview: 20/20 API tests passed; 31/33 responsive route checks passed at 1920x800, 390x844 and 360x780. Payouts, referrals, extension settings, simulator modes, studio/moderation, insights and physical reward workflows passed. Two confirmed frontend defects remain: mobile simulator overflow and incorrect all-region ad spend. Financial/ad/extension/geographic/shipping flows are intentionally SIMULATED/MOCKED; no real integrations requested or tested.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "ChargeExperience / simulator mobile", "issue": "390px viewport has 480px document width; 360px has 450px. Reproduced twice. Canvas extends from -90px to viewport+90px, causing horizontal page scroll outside the map. refresh.css mobile .thunder-field width calc(100vw + 180px) is not clipped on simulator; homepage clips it correctly.", "selector": "[data-testid='thunder-canvas']", "priority": "MEDIUM"},
+      {"component": "AdvertiserAnalytics", "issue": "All-region Ad spend uses total views times hardcoded 0.024 instead of summing country views times country CPVV. Dataset totals 143070 views: weighted spend is $3014.802 for 7 days, but UI calculates $3433.68; 30-day UI observed $13734.72 instead of $12059.208. Selected-country spend and 4x period scaling work.", "selector": "[data-testid='ad-analytics-kpi-2']", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_meantime.py",
+    "/app/test_reports/pytest/refresh_results.xml",
+    "/app/tests/refresh_responsive.py",
+    "/app/tests/review_refresh_assets.py",
+    "/app/test_reports/refresh_workflows/payouts.csv",
+    "/app/test_reports/refresh_map/india30.csv",
+    "/app/test_reports/refresh_confirm/automation_output/20261107_204933_e69e39d6b7fd/console_20261107_204933.log",
+    "/app/test_reports/refresh_final/automation_output/20261107_204841_6b182e410100/console_20261107_204841.log"
+  ],
+  "action_items": [
+    "Clip simulator electrical canvas at a suitable page/experience ancestor without clipping interactive content; rerun both mobile widths.",
+    "Calculate all-region spend as sum(country.views * Number(country.cpvv)) times period factor; verify country/reset/period behavior.",
+    "Correct Dashboard next reward eyebrow from MILESTONE 03 to MILESTONE 02 for Engineer tee (source review; Rewards now labels tee 02)."
+  ],
+  "critical_code_review_comments": [
+    "AdvertiserAnalytics.jsx line 11 hardcodes aggregate CPVV; weighted geographic total is inconsistent with regional data.",
+    "Dashboard.jsx line 23 retains pre-overclock-removal MILESTONE 03 for the tee, while Rewards labels the same milestone 02. Low-priority source-review mismatch, not separately asserted in browser."
+  ],
+  "updated_files": ["/app/backend/tests/test_meantime.py", "/app/tests/refresh_responsive.py", "/app/tests/review_refresh_assets.py", "/app/tests/cleanup_refresh_sessions.py", "/app/test_reports/iteration_2.json"],
+  "success_rate": {"backend": "100% (20/20)", "frontend": "93.9% responsive checks (31/33); exercised core workflows passed; 2 unresolved defects"},
+  "test_credentials": "Credentials file contains placeholder comments only. No credentials needed: anonymous isolated /api/session tokens used.",
+  "seed_data_creation": "No seeds, resets, migrations or pre-existing user changes. Pytest cleaned exact test tokens and owner records. Three tracked browser tokens cleaned by exact token/owner. Tool-initialized untracked anonymous default profiles may remain; not deleted without ownership evidence. Campaign and submission titles TEST_ prefixed.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "No application source changed. Obsolete boost test replaced with removal/history regression: old claim injected into test-owned profile only, hidden from state; two views credit exactly 22 mills. API coverage includes partial/all payouts, min/overdraft/noninteger, persisted wallet method/history, referral early rejection/+350 qualification/exact-once +1000 mills, linked fresh session real simulator +20 inviter revenue, extension settings and prior CRUD/moderation/insight/charge protections. UI verified payout cancel/$5/all/CSV/total, dashboard quick withdrawal, referral copy with granted clipboard permission, paused and site-excluded send disabled, insights-only zero earnings, ads +11 mills, latest saved popup creative, approved simulator creative, desk product loaded/locked, stickers claim/dispatch/delivery, contribution approval/publication and admin keyboard actions. Canvas >200k nontransparent pixels changes over time; reduced-motion canvas remains static/nonblank, CSS motion count zero, sampled send-button hover has no positional shift. Logo corners transparent; all images loaded after proper waits. Dashboard has timeline/no world map. Map has 7531 interactive nodes/158 regions; sampled Spain pixel tooltip and click KPI tested, India region centers at 300%, buttons/wheel/key zoom, arrow/pointer pan, contained mobile overflow and filtered 30-day CSV tested. Pixel/country views and clicks totals agree. Not exhaustively hovered every pixel or independently verified every coastal label; not tested physical higher-tier unlocked claims, thousands of referral qualifying views, hidden/offscreen CPU usage, or real third-party systems. Reset actions excluded for safety. Screenshots reside under refresh_responsive (desktop hero/mobile popup), refresh_final (mobile hero), refresh_workflows (desk and simulator overflow), refresh_map (desktop/mobile map). Initial image-loading and immediate-count assertion failures disappeared with explicit ready/image waits; wrong dashboard-ad-close selector corrected to dashboard-ad-dismiss. Initial clipboard denial was test permissions; copied successfully after permission grant. No API 500 or blocking page errors observed, only canvas readback performance warnings from recorder/tests. Prior zero-balance display defect retested fixed; overclock display behavior intentionally removed."
+}

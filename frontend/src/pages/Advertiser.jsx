@@ -2,7 +2,7 @@ import {useState} from 'react';
 import {Link} from 'react-router-dom';
 import {BrainCircuit,Code2,Cloud,Cpu,FlaskConical,ChartNoAxesCombined,Save,ArrowUpRight,Plus,Trash2,Send,ChevronDown,RotateCcw,Link2} from 'lucide-react';
 import {toast} from 'sonner';
-import {AdBox} from '../components/AdBox';
+import {ExtensionAdFrame as AdBox} from '../components/ExtensionAdFrame';
 import {PageHeader} from '../components/PageHeader';
 import {Ring,Segments} from '../components/Meters';
 import {useStore} from '../lib/store';
