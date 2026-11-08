@@ -6,7 +6,7 @@ import {Segments} from '../components/Meters';
 import {Sheet,SheetContent,SheetTitle,SheetDescription} from '../components/ui/sheet';
 import {useStore} from '../lib/store';
 import {products} from '../lib/content';
-const rewards=[{id:'stickers',name:'Holo sticker pack',views:100,Icon:Sticker,reserve:100},{id:'tee',name:'Engineer tee',views:500,Icon:Shirt,reserve:68},{id:'hoodie',name:'Stealth hoodie',views:1000,Icon:Gift,reserve:34},{id:'desk',name:'Desk mat & keycap',views:2500,Icon:Keyboard,reserve:14}];
+const rewards=[{id:'stickers',name:'Holo sticker pack',views:100,Icon:Sticker,reserve:100},{id:'tee',name:'Engineer tee',views:500,Icon:Shirt,reserve:68},{id:'hoodie',name:'Stealth hoodie',views:1000,Icon:Gift,reserve:34},{id:'desk',name:'Extended desk mat & keycap',views:2500,Icon:Keyboard,reserve:14}];
 export default function Rewards(){
  const {state,action}=useStore(),[selected,setSelected]=useState(null),[busy,setBusy]=useState(false);const views=state.profile.views,claimed=selected&&state.profile.claims[selected.id];
  const claim=async()=>{setBusy(true);try{await action(`/rewards/${selected.id}/claim`);toast.success('Demo reward claimed. No physical shipment created.');}catch{}finally{setBusy(false);}};

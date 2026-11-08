@@ -10,7 +10,7 @@ export const StoreProvider = ({children}) => {
     try {const {data} = await api[method](path, payload); if (data.profile) setState(data); return data;}
     catch (e) {toast.error(typeof e.response?.data?.detail === 'string' ? e.response.data.detail : 'Could not save. Please try again.'); throw e;}
   }, []);
-  return <Store.Provider value={{state, action, error}}>{children}</Store.Provider>;
+  return <Store.Provider value={{state, action, error, replaceState:setState}}>{children}</Store.Provider>;
 };
 export const useStore = () => useContext(Store);
 export const money = (mills, digits = 2) => `$${(mills / 1000).toFixed(digits)}`;

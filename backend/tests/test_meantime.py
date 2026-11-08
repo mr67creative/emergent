@@ -195,7 +195,7 @@ def test_linked_referral_actual_simulator_activity(sandbox):
     assert state(sandbox)['profile']['balance_mills'] == 14850
 
 def test_extension_settings_persistence_validation(sandbox):
-    settings={'enabled':False,'mode':'insights','platforms':['Claude','Grok']}
+    settings={'enabled':False,'mode':'insights','platforms':['Claude','Grok'],'placement':'under_prompt','display_mode':'persist_until_5s'}
     r=sandbox.put(BASE+'/extension/settings', json=settings, timeout=20)
     assert r.status_code == 200 and state(sandbox)['profile']['extension'] == settings
     r=sandbox.put(BASE+'/extension/settings', json={**settings,'platforms':['Unknown']}, timeout=20)

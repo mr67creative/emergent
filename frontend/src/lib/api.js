@@ -1,4 +1,5 @@
 import axios from 'axios';
+import {recoverInterruptedViews} from './viewLifecycle';
 export const api = axios.create({baseURL: `${process.env.REACT_APP_BACKEND_URL}/api`});
 let starting;
 export async function connect() {
@@ -7,6 +8,7 @@ export async function connect() {
     let token = localStorage.getItem('meantime-demo-token');
     if (!token) { const referral_code = new URLSearchParams(window.location.search).get('ref'); const {data} = await api.post('/session', referral_code ? {referral_code} : {}); token = data.token; localStorage.setItem('meantime-demo-token', token); }
     api.defaults.headers.common['X-Demo-Token'] = token;
+    await recoverInterruptedViews(token);
     try { return (await api.get('/state')).data; }
     catch (e) { if (e.response?.status === 401) { localStorage.removeItem('meantime-demo-token'); starting = null; return connect(); } throw e; }
   })();

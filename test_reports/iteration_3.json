@@ -1,0 +1,58 @@
+{
+  "summary": "Workflow expansion tested through public preview: 32/32 API cases passed (15 new + 17 existing); all 33 route/viewport checks passed at 1920x800, 390x844 and 360x780. Shared chat, studio edits, 2/5/8/15s thresholds, early wait-only, guarantees, insights, paused/site-excluded chat, payout destinations, campaign analytics and ledger work. Three frontend defects confirmed. AI, ad inventory, financial transfers/shipping and example datasets are intentionally SIMULATED/MOCKED; private session/CRUD/receipts persist in MongoDB. No application source changed.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "AdvertiserAnalytics CSV export", "issue": "After two recorded views at bid $0.02, changing campaign bid to $0.04 preserves correct UI spend $0.04 but exports country CPVV 0.04. CSV implies $0.08 spend for those two historical views. Export derives CPVV from current campaign.bid, not recorded event bids. All-campaign export also leaves CPVV blank by source review.", "selector": "[data-testid='export-analytics']", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [
+      {"flow": "Reload during active chat view", "issue": "Send, wait for ad, reload before threshold: no cancellation receipt exists for returned view ID, and balance stays unchanged. useChatFlow handles visibilitychange and React unmount only; reload does not run its unmount cleanup. Pending session charge is abandoned until overwritten/canceled. Test manually canceled only its own returned ID afterward.", "affected_selectors": ["[data-testid='simulator-send']", "[data-testid='simulator-ad-box']", "[data-testid='event-ledger']"], "priority": "MEDIUM"},
+      {"flow": "Navigation before /charges/start resolves", "issue": "Reproduced twice using a 1.5s delayed start response and immediate Overview navigation. Cleanup sends POST /api/charges/cancel with {id:null,reason:navigation}, producing 422 and browser console error. Once start resolves, a second valid cancellation succeeds and exactly one unpaid receipt is recorded; no incorrect payout or blocking UI error observed.", "affected_selectors": ["[data-testid='simulator-send']", "[data-testid='nav-dashboard']", "[data-testid='mobile-nav-dashboard']"], "priority": "LOW"}
+    ],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_workflow_expansion.py",
+    "/app/backend/tests/test_meantime.py",
+    "/app/test_reports/pytest/workflow_results.xml",
+    "/app/test_reports/pytest/workflow_legacy_results.xml",
+    "/app/tests/workflow_responsive.py",
+    "/app/tests/workflow_e2e.py",
+    "/app/tests/workflow_edges.py",
+    "/app/tests/workflow_boundaries.py",
+    "/app/tests/workflow_map_assets.py",
+    "/app/tests/workflow_race_confirm.py",
+    "/app/test_reports/workflow_e2e/campaign.csv",
+    "/app/test_reports/workflow_e2e/ledger.csv",
+    "/app/test_reports/workflow_boundaries/changed-bid.csv",
+    "/app/test_reports/workflow_edges/automation_output/20261108_060345_21fd2fd2ce2a/console_20261108_060345.log"
+  ],
+  "action_items": [
+    "Add unload/pagehide cancellation with a reliable authenticated keepalive request; persist unpaid navigation receipt before abandoning the view.",
+    "Never cancel an unresolved start using a null ID; defer cancellation until the returned ID is available, preserving exact-once handling.",
+    "Derive recorded CSV country CPVV from historical credited event bids (weighted by paid views); handle mixed campaigns rather than using current campaign.bid.",
+    "Retest these three defects; no A/B allocation engine should be added."
+  ],
+  "critical_code_review_comments": [
+    "components/chat/useChatFlow.js:11 cleanup checks remote/settled but not id, causing the reproduced null-ID 422. The effect lacks pagehide/unload handling, explaining missing reload receipts.",
+    "pages/AdvertiserAnalytics.jsx:20 uses campaign?.bid for CSV, while line17 correctly sums stored e.bid for spend. Historical financial exports consequently disagree with UI."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_workflow_expansion.py",
+    "/app/backend/tests/test_meantime.py",
+    "/app/tests/workflow_responsive.py",
+    "/app/tests/workflow_e2e.py",
+    "/app/tests/workflow_edges.py",
+    "/app/tests/workflow_boundaries.py",
+    "/app/tests/workflow_map_assets.py",
+    "/app/tests/workflow_race_confirm.py",
+    "/app/tests/cleanup_workflow_sessions.py",
+    "/app/test_reports/iteration_3.json"
+  ],
+  "success_rate": {"backend": "100% (32/32 final cases)", "frontend": "100% responsive route checks (33/33); core workflows pass, 3 confirmed defects remain"},
+  "test_credentials": "Credential file contains placeholder comments only. No login credentials needed; newly created private anonymous session tokens used exclusively.",
+  "seed_data_creation": "No seed/reset/migration actions or pre-existing profile changes. TEST_ campaigns/destinations were created only in fresh sessions. API fixtures cleaned exact owned tokens and records. Cleanup verified deletion of seven recorded browser sessions and their exact campaign IDs; one runner-initialized untracked default session may remain and was not deleted without ownership evidence.",
+  "retest_needed": true,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "No business functionality fixes applied. Old extension test expectation updated to include placement/display_mode. Initial new API harness wrongly included the six example receipts; corrected once to exclude sample=true, then all 15 passed. No genuine backend failures/500s or flaky API outcomes. Tests cover duplicate/early complete, 6 concurrent completes (one 200/five 409), 3 complete/cancel races (one receipt, balance/views consistent), selected stored bid/duration overrides, wait-only early response even after full time, insights response threshold, clicks before/after cancellation, validation 422 and missing campaign404, bank/wallet privacy and CRUD. UI campaign8/response3 wait-only earns0; guaranteed shows response3 while ad remains, credits11mills once at8, records selected Claude/variantB/click. Studio canvas/form reciprocal all3 fields, separate variants, saved targeting India/France, duration limits, unbilled animation passed. Analytics empty0 and selected campaign1paid/2impressions/$0.02/50%verification, region zero/filter/dimming. Sample aggregate spend now $3014.80/$12059.21, prior mobile simulator overflow and dashboard milestone label fixed. Ledger totals/existing6Example rows/new receipts/expanded8s bar/all filters/CSV checked. Paused and excluded-site chat answers without ad/event/earnings. Hidden signal tested by synthetic document.hidden + visibilitychange, not real tab-background OS behavior. Payout bank/wallet edit/reload/private API isolation/mobile modal/$5 wallet payout/history safe. Rewards4items/extended rectangular mat with bolt product loaded; no higher-tier shipping run. Hero default simulated prompt/ad/response/+0.011, popup containment across sizes, wavy canvas spans CTA, single-bolt image loads, no CSSAnimation/CSSTransition. Empty-campaign no-pin France pixel hover gives actual country0, map zoom/reset work. Use scripts via namespace={} then exec(...,namespace); await namespace['run'](page). Reset actions intentionally excluded. Application build log reviewed (successful with two hook dependency warnings), no new build run. Retest early navigation and reload after lifecycle fix; CSV changing bid from0.02 to0.04 reproduces export mismatch. Real providers/extension installation/LLM/payout/shipping not integrated and explicitly MOCKED."
+}

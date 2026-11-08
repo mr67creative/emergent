@@ -1,9 +1,20 @@
 import secrets
+from datetime import datetime, timezone, timedelta
+
+def example_events():
+    titles=['Docs your engineers will actually read','Spin up GPUs in seconds','A terminal that keeps up with your agents','Why KV caches grow with every token','Close your books in half the time','Your next idea deserves better tools']
+    statuses=['credited','below_threshold','credited','insight','window_blurred','credited']
+    return [{'id':f'example-{i}','at':(datetime.now(timezone.utc)-timedelta(minutes=12+i*9)).isoformat(),
+             'title':title,'campaign_id':None,'variant':chr(65+i%3),'kind':'insight' if i==3 else 'ad',
+             'status':statuses[i],'amount_mills':11 if statuses[i]=='credited' else 0,
+             'watched_seconds':5 if statuses[i]=='credited' else 2.4,'required_seconds':5,
+             'slot':1+i%3,'platform':['ChatGPT','Claude','Gemini'][i%3],'country':'United States of America',
+             'clicked':False,'bid':.02,'topic':'AI / ML','sample':True} for i,title in enumerate(titles)]
 
 def feature_defaults():
     return {'referral_code': 'MT-' + secrets.token_hex(4).upper(), 'referral_earned_mills': 0,
-            'payout_method': 'demo-bank',
-            'extension': {'enabled': True, 'mode': 'ads', 'platforms': ['ChatGPT','Claude','Gemini','DeepSeek','Grok']},
+            'payout_method': 'demo-bank', 'payout_destinations':{}, 'events':example_events(),
+            'extension': {'enabled': True, 'mode': 'ads', 'placement':'under_prompt','display_mode':'persist_until_5s','platforms': ['ChatGPT','Claude','Gemini','DeepSeek','Grok']},
             'referrals': [{'id':'ref-maya','name':'Maya Chen','verified_mills':4300,'claimed':False,'sample':True},
                           {'id':'ref-jamie','name':'Jamie Park','verified_mills':2850,'claimed':False,'sample':True},
                           {'id':'ref-taylor','name':'Taylor Quinn','verified_mills':1250,'claimed':False,'sample':True}]}

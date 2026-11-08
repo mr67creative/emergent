@@ -9,7 +9,8 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, APIRouter, Depends, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
-from pydantic import BaseModel, Field, HttpUrl, ConfigDict
+from pydantic import BaseModel, Field, HttpUrl, ConfigDict, model_validator
+from view_flows import install_view_routes
 from pymongo import ReturnDocument
 from sample_data import INSIGHTS, REVIEWS, new_profile, feature_defaults
 
@@ -39,6 +40,8 @@ async def owner(x_demo_token: str = Header(...)):
     for key, value in feature_defaults().items():
         if key not in document['profile']:
             await db.sessions.update_one({'token': x_demo_token, f'profile.{key}': {'$exists': False}}, {'$set': {f'profile.{key}': value}})
+    for key,value in {'placement':'under_prompt','display_mode':'persist_until_5s'}.items():
+        await db.sessions.update_one({'token':x_demo_token, f'profile.extension.{key}':{'$exists':False}}, {'$set':{f'profile.extension.{key}':value}})
     document = await db.sessions.find_one({'token': x_demo_token}, {'_id': 0})
     return document
 
@@ -81,29 +84,6 @@ async def create_session(payload: JoinSession | None = None):
 @api.get('/state', response_model=State)
 async def get_state(session=Depends(owner)):
     return await state_for(session['token'])
-
-@api.post('/charges/start')
-async def start_charge(session=Depends(owner)):
-    charge = {'id': str(uuid.uuid4()), 'started_at': datetime.now(timezone.utc).isoformat()}
-    await db.sessions.update_one({'token': session['token']}, {'$set': {'charge': charge}})
-    return charge
-
-class ChargeComplete(BaseModel):
-    id: str
-
-@api.post('/charges/complete', response_model=State)
-async def complete_charge(payload: ChargeComplete, session=Depends(owner)):
-    cutoff = (datetime.now(timezone.utc) - timedelta(seconds=5)).isoformat()
-    increment = {'profile.balance_mills': 11, 'profile.views': 1, 'profile.seconds': 5}
-    update = {'$inc': increment, '$unset': {'charge': ''}}
-    result = await db.sessions.update_one({'token': session['token'], 'charge.id': payload.id, 'charge.started_at': {'$lte': cutoff}}, update)
-    if not result.modified_count:
-        raise HTTPException(409, 'Charge incomplete or already credited.')
-    if session.get('referred_by'):
-        await db.sessions.update_one({'token':session['referred_by'], 'profile.referrals.id':session['referral_id']}, {'$inc':{'profile.referrals.$.verified_mills':20}})
-    result_state = await state_for(session['token'])
-    result_state.credited_mills = increment['profile.balance_mills']
-    return result_state
 
 class Withdrawal(BaseModel):
     amount_mills: int | None = Field(default=None, ge=5000)
@@ -201,6 +181,8 @@ class Campaign(BaseModel):
     budget: int = Field(ge=10, le=1000)
     url: HttpUrl
     status: Literal['draft','pending'] = 'draft'
+    duration_seconds: int = Field(default=5, ge=2, le=15)
+    countries: list[str] = Field(default_factory=list, max_length=30)
 
 @api.put('/campaigns/{campaign_id}', response_model=State)
 async def save_campaign(campaign_id: str, payload: Campaign, session=Depends(owner)):
@@ -258,6 +240,8 @@ class ExtensionSettings(BaseModel):
     enabled: bool
     mode: Literal['ads','insights']
     platforms: list[Literal['ChatGPT','Claude','Gemini','DeepSeek','Grok']] = Field(max_length=5)
+    placement: Literal['under_prompt','above_composer'] = 'under_prompt'
+    display_mode: Literal['wait_time_only','persist_until_5s'] = 'persist_until_5s'
 
 @api.put('/extension/settings', response_model=State)
 async def extension_settings(payload: ExtensionSettings, session=Depends(owner)):
@@ -287,6 +271,30 @@ async def referral_claim(referral_id: str, session=Depends(owner)):
         raise HTTPException(409, 'Referral reward already claimed.')
     return await state_for(session['token'])
 
+class DestinationDetails(BaseModel):
+    model_config=ConfigDict(str_strip_whitespace=True)
+    method: Literal['demo-bank','demo-wallet']
+    label: str = Field(min_length=2,max_length=50)
+    holder: str = Field(default='',max_length=80)
+    bank: str = Field(default='',max_length=80)
+    last4: str = Field(default='',max_length=4)
+    address: str = Field(default='',max_length=120)
+
+    @model_validator(mode='after')
+    def validate_details(self):
+        if self.method=='demo-bank' and (not self.holder or not self.bank or len(self.last4)!=4 or not self.last4.isdigit()):
+            raise ValueError('Enter the account holder, bank name, and last four digits only.')
+        if self.method=='demo-wallet' and not self.address:
+            raise ValueError('Enter a demo wallet address or email.')
+        return self
+
+@api.put('/payouts/destination', response_model=State)
+async def save_destination(payload: DestinationDetails, session=Depends(owner)):
+    details=payload.model_dump(exclude={'method'})
+    await db.sessions.update_one({'token':session['token']},{'$set':{f'profile.payout_destinations.{payload.method}':details,'profile.payout_method':payload.method}})
+    return await state_for(session['token'])
+
+install_view_routes(api,db,owner,state_for,State)
 app.include_router(api)
 
 @app.on_event('startup')

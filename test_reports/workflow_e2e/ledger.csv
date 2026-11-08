@@ -1,0 +1,9 @@
+Date,Creative,Status,Viewed seconds,Required seconds,Amount USD,Example
+2026-11-08T06:02:49.712032+00:00,"TEST_Variant B",credited,8,8,0.011,false
+2026-11-08T06:02:40.669564+00:00,"TEST_Variant B",below_threshold,3,8,0,false
+2026-11-08T05:05:27.405496+00:00,"Your next idea deserves better tools",credited,5,5,0.011,true
+2026-11-08T05:14:27.405491+00:00,"Close your books in half the time",window_blurred,2.4,5,0,true
+2026-11-08T05:23:27.405488+00:00,"Why KV caches grow with every token",insight,2.4,5,0,true
+2026-11-08T05:32:27.405484+00:00,"A terminal that keeps up with your agents",credited,5,5,0.011,true
+2026-11-08T05:41:27.405480+00:00,"Spin up GPUs in seconds",below_threshold,2.4,5,0,true
+2026-11-08T05:50:27.405465+00:00,"Docs your engineers will actually read",credited,5,5,0.011,true
